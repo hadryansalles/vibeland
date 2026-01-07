@@ -31,13 +31,15 @@ export const TUNING = {
     ENEMY_SPEED: 2.0, // Units per second
     ENEMY_INITIAL_POSITION: new THREE.Vector3(5, 0.5, 5),    
     // Movement
-    MOVEMENT_SPEED: 5.0, // Units per second
+    MOVEMENT_SPEED: 0.10,
+    // Rotation smoothing when changing facing direction (per-frame base lerp)
+    ROTATION_LERP_FACTOR: 0.2,
 
     // Jump Animation
-    JUMP_SPEED_INCREMENT: 9.0, // Radians per second
-    JUMP_BOUNCE_HEIGHT: 1.0, 
-    JUMP_SQUASH_FACTOR: 0.25,
-    JUMP_LERP_FACTOR: 10.0, // Lerp speed per second
+    JUMP_SPEED_INCREMENT: 0.15,
+    JUMP_BOUNCE_HEIGHT: 0.2, // Height added to base position
+    JUMP_SQUASH_FACTOR: 0.1,
+    JUMP_LERP_FACTOR: 0.1,
     JUMP_BASE_Y_OFFSET: 0.5, // Center point of the cube
 
     // SSAO

@@ -5,6 +5,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { TUNING } from './tuning'
+import { convertModelToTHREEJS } from './model';
+import type { Model } from './model';
 import { BaseEnemy } from './base_enemy';
 
 // Scene setup
@@ -60,12 +62,33 @@ plane.rotation.x = -Math.PI / 2;
 plane.receiveShadow = true; // Ground receives shadows
 scene.add(plane);
 
-// Cube Character
-const cubeGeometry = new THREE.BoxGeometry(TUNING.CHARACTER_SIZE, TUNING.CHARACTER_SIZE, TUNING.CHARACTER_SIZE);
-const cubeMaterial = new THREE.MeshStandardMaterial({ color: TUNING.CHARACTER_COLOR });
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-cube.position.y = TUNING.CHARACTER_INITIAL_Y;
-cube.castShadow = true; // Character casts shadows
+// Player Character (composed from small cubes)
+const playerModel: Model = {
+  cubes: [
+    // torso
+    { position: [0, 0, 0], size: [0.6, 0.5, 0.4], color: [0.15, 0.6, 0.9] },
+    // head
+    { position: [0, 0.33, 0], size: [0.33, 0.33, 0.33], color: [1.0, 0.9, 0.8] },
+    // arms
+    { position: [-0.45, 0.05, 0], size: [0.18, 0.45, 0.18], color: [0.15, 0.6, 0.9] },
+    { position: [0.45, 0.05, 0], size: [0.18, 0.45, 0.18], color: [0.15, 0.6, 0.9] },
+    // legs
+    { position: [-0.17, -0.35, 0], size: [0.2, 0.3, 0.2], color: [0.08, 0.08, 0.08] },
+    { position: [0.17, -0.35, 0], size: [0.2, 0.3, 0.2], color: [0.08, 0.08, 0.08] },
+    // backpack
+    { position: [0, 0, -0.28], size: [0.4, 0.5, 0.16], color: [0.8, 0.2, 0.2] },
+  ],
+};
+
+const player = convertModelToTHREEJS(playerModel);
+player.position.y = TUNING.CHARACTER_INITIAL_Y;
+scene.add(player);
+
+const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+);
+cube.castShadow = true;
 cube.receiveShadow = true;
 scene.add(cube);
 
@@ -119,14 +142,23 @@ window.addEventListener('resize', () => {
     composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Animation Loop
+// Animation Loop (time-step independent)
 let jumpTime = 0;
-const clock = new THREE.Clock();
+let _lastFrameTime: number | null = null; // ms
 
-function animate() {
+function animate(time: number) {
+  // Schedule next frame early
   requestAnimationFrame(animate);
 
-  const dt = clock.getDelta();
+  // Initialize last time on first frame
+  if (_lastFrameTime === null) _lastFrameTime = time;
+
+  // Delta in seconds, clamped to avoid huge steps (e.g., when tab was inactive)
+  let deltaSeconds = Math.min((time - _lastFrameTime) / 1000, 0.1);
+  _lastFrameTime = time;
+
+  // Convert to "reference frames" assuming 60 FPS so existing tuning remains usable
+  const dt = deltaSeconds * 60;
 
   const direction = new THREE.Vector3();
   const cameraForward = new THREE.Vector3();
@@ -160,33 +192,52 @@ function animate() {
   }
 
   if (moving) {
-    // Normalize to ensure consistent speed in all directions
+    // Normalize to ensure consistent speed in all directions.
+    // Scale by deltaFrames so tuning values (which were per-frame) remain compatible.
     direction.normalize().multiplyScalar(TUNING.MOVEMENT_SPEED * dt);
-    cube.position.add(direction);
+    player.position.add(direction);
 
+    // Advance jump time scaled by delta frames
     jumpTime += TUNING.JUMP_SPEED_INCREMENT * dt;
+
     // Bouncing motion
     const bounce = Math.abs(Math.sin(jumpTime));
-    cube.position.y = TUNING.CHARACTER_INITIAL_Y + bounce * TUNING.JUMP_BOUNCE_HEIGHT;
+    player.position.y = TUNING.CHARACTER_INITIAL_Y + bounce * TUNING.JUMP_BOUNCE_HEIGHT;
 
     // Squeeze and stretch
-    // Squash at the bottom (bounce near 0), stretch at the top (bounce near 1)
     const squashFactor = TUNING.JUMP_SQUASH_FACTOR;
     const scaleY = 1 - squashFactor + (bounce * squashFactor * 2);
     const scaleXZ = 1 / Math.sqrt(scaleY);
-    cube.scale.set(scaleXZ, scaleY, scaleXZ);
+    player.scale.set(scaleXZ, scaleY, scaleXZ);
+
+      // Rotate player to face movement direction (smooth)
+      // Use XZ-plane projection of the movement vector to compute desired yaw.
+      const moveDir = new THREE.Vector3(direction.x, 0, direction.z);
+      if (moveDir.lengthSq() > 1e-6) {
+        moveDir.normalize();
+        const desiredYaw = Math.atan2(moveDir.x, moveDir.z);
+
+        // Time-corrected lerp alpha so smoothing is framerate independent (same pattern as jump lerp)
+        const baseLerp = TUNING.ROTATION_LERP_FACTOR;
+        const lerpAlpha = 1 - Math.pow(1 - baseLerp, dt);
+
+        const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), desiredYaw);
+        player.quaternion.slerp(targetQuat, lerpAlpha);
+      }
   } else {
+    // Reset jump time and smoothly lerp back to resting pose.
     jumpTime = 0;
-    // Lerp factors are usually 0-1 per frame, but for time-based we use a different formula or high factor
-    // Simplified time-based lerp: lerp(a, b, 1 - exp(-decay * dt))
-    const lerpFactor = 1 - Math.exp(-TUNING.JUMP_LERP_FACTOR * dt);
-    
-    cube.position.y = THREE.MathUtils.lerp(cube.position.y, TUNING.CHARACTER_INITIAL_Y, lerpFactor);
-    cube.scale.lerp(new THREE.Vector3(1, 1, 1), lerpFactor);
+
+    // Convert per-frame lerp factor into a time-corrected alpha so smoothing is independent of FPS
+    const baseLerp = TUNING.JUMP_LERP_FACTOR; // assumed per-frame
+    const lerpAlpha = 1 - Math.pow(1 - baseLerp, dt);
+
+    player.position.y = THREE.MathUtils.lerp(player.position.y, TUNING.CHARACTER_INITIAL_Y, lerpAlpha);
+    player.scale.lerp(new THREE.Vector3(1, 1, 1), lerpAlpha);
   }
 
   // Stable target for camera and lights (ignoring jump height)
-  const targetPosition = new THREE.Vector3(cube.position.x, TUNING.CHARACTER_INITIAL_Y, cube.position.z);
+  const targetPosition = new THREE.Vector3(player.position.x, TUNING.CHARACTER_INITIAL_Y, player.position.z);
 
   // Camera follow with isometric offset
   camera.position.copy(targetPosition).add(TUNING.ISO_OFFSET);
@@ -202,4 +253,5 @@ function animate() {
   composer.render();
 }
 
-animate();
+// Start loop
+requestAnimationFrame(animate);
