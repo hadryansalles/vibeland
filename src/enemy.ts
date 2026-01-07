@@ -20,6 +20,9 @@ export class Enemy extends Entity {
 
         super(mesh, TUNING.ENEMY_HEALTH);
         this.target = target;
+        // Collision size for this enemy
+        this.collisionRadius = TUNING.ENEMY_SIZE * 0.5;
+        this.mass = 1;
     }
 
     update(dt: number) {

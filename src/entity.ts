@@ -7,6 +7,10 @@ export abstract class Entity {
     public health: number;
     public maxHealth: number;
     public isDead: boolean = false;
+    // Collision radius on the XZ plane (world units). Subclasses should set appropriately.
+    public collisionRadius: number = 0.5;
+    // Mass used for collision resolution (larger mass -> moves less when collided)
+    public mass: number = 1;
     protected flashTimer: number = 0;
     protected scene: THREE.Scene | null = null;
 

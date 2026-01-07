@@ -7,6 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { TUNING } from './tuning'
 import { Player } from './player';
 import { Enemy } from './enemy';
+import { Entity } from './entity';
 import { createWorld } from './world';
 
 // Scene setup
@@ -249,6 +250,51 @@ window.addEventListener('resize', () => {
 // Animation Loop (time-step independent)
 let _lastFrameTime: number | null = null; // ms
 
+// Simple collision resolution for entities (circle-based on XZ plane)
+function resolveEntityCollisions(entities: Entity[]) {
+  for (let i = 0; i < entities.length; i++) {
+    const a = entities[i];
+    if (!a || a.isDead) continue;
+    for (let j = i + 1; j < entities.length; j++) {
+      const b = entities[j];
+      if (!b || b.isDead) continue;
+
+      const rA = a.collisionRadius ?? 0.5;
+      const rB = b.collisionRadius ?? 0.5;
+
+      let dx = b.position.x - a.position.x;
+      let dz = b.position.z - a.position.z;
+      let dist2 = dx * dx + dz * dz;
+      const minDist = rA + rB;
+
+      // If exactly overlapping, jitter a bit so we can resolve
+      if (dist2 < 1e-8) {
+        dx = (Math.random() - 0.5) * 1e-3;
+        dz = (Math.random() - 0.5) * 1e-3;
+        dist2 = dx * dx + dz * dz;
+      }
+
+      if (dist2 < minDist * minDist) {
+        const dist = Math.sqrt(dist2);
+        const overlap = minDist - dist;
+
+        const nx = dx / (dist || 1);
+        const nz = dz / (dist || 1);
+
+        // Move proportional to inverse mass so heavier objects move less
+        const totalMass = (a.mass || 1) + (b.mass || 1);
+        const aMove = overlap * ((b.mass || 1) / totalMass);
+        const bMove = overlap * ((a.mass || 1) / totalMass);
+
+        a.position.x -= nx * aMove;
+        a.position.z -= nz * aMove;
+        b.position.x += nx * bMove;
+        b.position.z += nz * bMove;
+      }
+    }
+  }
+}
+
 function animate(time: number) {
   // Schedule next frame early
   requestAnimationFrame(animate);
@@ -350,6 +396,10 @@ function animate(time: number) {
     }
     enemy.update(dt);
   }
+
+  // Resolve simple circular collisions on XZ plane so entities don't overlap
+  const allEntities: Entity[] = [player, ...enemies];
+  resolveEntityCollisions(allEntities);
 
   composer.render();
 }

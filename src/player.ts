@@ -30,6 +30,9 @@ export class Player extends Entity {
         const mesh = convertModelToTHREEJS(playerModel);
         mesh.position.y = TUNING.CHARACTER_INITIAL_Y;
         super(mesh, TUNING.PLAYER_HEALTH);
+        // Set collision properties
+        this.collisionRadius = TUNING.CHARACTER_SIZE * 0.5;
+        this.mass = 2;
     }
 
     update(dt: number) {
