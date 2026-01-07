@@ -83,7 +83,7 @@ for (let i = 0; i < 100; i++) {
   const z = Math.sin(angle) * radius;
   const r = Math.random();
   let ent: Entity;
-  if (r < 0.45) {
+  if (r < 0.7) {
     ent = new Slime(new THREE.Vector3(x, 0.45, z), player);
   } else if (r < 0.9) {
     ent = new Undead(new THREE.Vector3(x, 0.5, z), player);
