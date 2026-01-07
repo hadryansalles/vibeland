@@ -96,5 +96,22 @@ export const TUNING = {
     // Death animation
     DEATH_FADE_DURATION: 0.3, // seconds to fully fade out
     DEATH_ROTATION_ANGLE_DEGREES: 90,
+
+    // Audio (SFX)
+    // Note: browsers require a user gesture (click/tap/keydown) before audio can start.
+    SFX_VOLUME: 0.25, // master SFX gain (0..1)
+    SFX_ATTACK_VOLUME: 0.16,
+    SFX_HIT_VOLUME: 0.22,
+    SFX_DEATH_VOLUME: 0.28,
+    SFX_UI_VOLUME: 0.18,
+
+    // SFX bus processing (for extra "juice")
+    SFX_DRIVE: 0.15, // 0..~0.5 (soft clip amount)
+    SFX_COMP_THRESHOLD: -18,
+    SFX_COMP_KNEE: 24,
+    SFX_COMP_RATIO: 6,
+    SFX_COMP_ATTACK: 0.003,
+    SFX_COMP_RELEASE: 0.12,
+    SFX_TONE_LP_HZ: 12000,
 };
 

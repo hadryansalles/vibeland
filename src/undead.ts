@@ -3,7 +3,8 @@ import { Entity } from './entity';
 import { TUNING } from './tuning';
 import { convertModelToTHREEJS } from './model';
 import type { Model } from './model';
-import { createSectorMesh, createRectangleMesh } from './attack_visuals';
+import { createRectangleMesh } from './attack_visuals';
+import { audio } from './audio';
 
 export class Undead extends Entity {
     private target: Entity;
@@ -128,6 +129,8 @@ export class Undead extends Entity {
 
     attack(target: Entity) {
         if (this.attackCooldown > 0 || this.isDead || this.isDying || target.isDead || target.isDying || !this.scene) return;
+
+        audio.playEnemyAttack('undead');
         // Only apply damage if the target is inside the forward rectangular area
         const width = TUNING.UNDEAD_ATTACK_WIDTH;
         const length = TUNING.UNDEAD_ATTACK_RANGE;

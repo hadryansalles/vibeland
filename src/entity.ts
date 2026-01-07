@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TUNING } from './tuning';
+import { audio } from './audio';
 
 export abstract class Entity {
     public mesh: THREE.Object3D;
@@ -103,6 +104,11 @@ export abstract class Entity {
         this.health -= amount;
         this.flashTimer = TUNING.DAMAGE_FLASH_DURATION; // Flash using tuning
         this.setFlashMaterials();
+
+        // Audio feedback (rate-limited in the audio manager)
+        const isPlayer = this.displayName === 'Player' || (this.constructor && (this.constructor as any).name === 'Player');
+        const hp01 = this.maxHealth > 0 ? (this.health / this.maxHealth) : undefined;
+        audio.playHit({ isPlayer, damage: amount, hp01 });
         
         console.log(`${this.constructor.name} took ${amount} damage. Health: ${this.health}`);
         if (this.health <= 0) {
@@ -113,6 +119,11 @@ export abstract class Entity {
 
     die() {
         if (this.isDead || this.isDying) return;
+
+        // Audio feedback
+        const isPlayer = this.displayName === 'Player' || (this.constructor && (this.constructor as any).name === 'Player');
+        audio.playDeath(isPlayer);
+
         // start death animation (tilt + fade)
         this.isDying = true;
         this.deathTimer = 0;

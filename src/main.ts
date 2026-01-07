@@ -11,6 +11,7 @@ import { Slime } from './slime';
 import { Undead } from './undead';
 import { Entity } from './entity';
 import { createWorld } from './world';
+import { audio } from './audio';
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -39,6 +40,11 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true; // Enable shadows
 renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
 document.body.appendChild(renderer.domElement);
+
+// Audio: restore settings and satisfy browser gesture requirements.
+audio.initFromStorage();
+audio.installUnlockHandlers(window);
+audio.installUnlockHandlers(renderer.domElement);
 
 // Lights
 const ambientLight = new THREE.AmbientLight(TUNING.AMBIENT_LIGHT_COLOR, TUNING.AMBIENT_LIGHT_INTENSITY);
@@ -208,16 +214,26 @@ function doRespawn() {
   directionalLight.position.copy(targetPosition).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
   directionalLight.target.position.copy(targetPosition);
   directionalLight.target.updateMatrixWorld();
+
+  audio.playRespawn();
 }
 
 const respawnButton = respawnOverlay.querySelector('#respawn-button') as HTMLButtonElement;
-respawnButton.addEventListener('click', () => doRespawn());
+respawnButton.addEventListener('click', () => {
+  audio.playUIClick();
+  doRespawn();
+});
 
 // Controls state
 const keys: { [key: string]: boolean } = {};
 
 window.addEventListener('keydown', (e) => {
   keys[e.code] = true;
+
+  // Toggle SFX mute (press M)
+  if (e.code === 'KeyM' && !e.repeat) {
+    audio.setEnabled(!audio.getEnabled());
+  }
 });
 
 window.addEventListener('keyup', (e) => {

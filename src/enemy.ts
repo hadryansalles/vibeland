@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Entity } from './entity';
 import { TUNING } from './tuning';
 import { createSectorMesh } from './attack_visuals';
+import { audio } from './audio';
 
 export class Enemy extends Entity {
     private target: Entity;
@@ -58,6 +59,8 @@ export class Enemy extends Entity {
 
     attack(target: Entity) {
         if (this.attackCooldown > 0 || this.isDead || this.isDying || target.isDead || target.isDying || !this.scene) return;
+
+        audio.playEnemyAttack('enemy');
 
         target.takeDamage(TUNING.ENEMY_ATTACK_DAMAGE);
         this.attackCooldown = TUNING.ENEMY_ATTACK_COOLDOWN;

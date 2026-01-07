@@ -4,6 +4,7 @@ import { TUNING } from './tuning';
 import { convertModelToTHREEJS } from './model';
 import type { Model } from './model';
 import { createSectorMesh } from './attack_visuals';
+import { audio } from './audio';
 
 export class Player extends Entity {
     private jumpTime: number = 0;
@@ -54,6 +55,8 @@ export class Player extends Entity {
 
     attack(enemies: Entity[], direction?: THREE.Vector3) {
         if (this.attackCooldown > 0 || this.isDead || this.isDying || !this.scene) return;
+
+        audio.playPlayerAttack();
 
         // Determine attack direction (XZ plane). If none provided, use the player's facing.
         let dir: THREE.Vector3;

@@ -4,6 +4,7 @@ import { TUNING } from './tuning';
 import { convertModelToTHREEJS } from './model';
 import type { Model } from './model';
 import { createSectorMesh } from './attack_visuals';
+import { audio } from './audio';
 
 export class Slime extends Entity {
     private target: Entity;
@@ -88,6 +89,8 @@ export class Slime extends Entity {
 
     attack(target: Entity) {
         if (this.attackCooldown > 0 || this.isDead || this.isDying || target.isDead || target.isDying || !this.scene) return;
+
+        audio.playEnemyAttack('slime');
 
         target.takeDamage(TUNING.SLIME_ATTACK_DAMAGE);
         this.attackCooldown = TUNING.SLIME_ATTACK_COOLDOWN;
