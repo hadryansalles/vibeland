@@ -85,6 +85,9 @@ export class Slime extends Entity {
         if (dist <= TUNING.SLIME_ATTACK_RANGE) {
             this.attack(this.target);
         }
+
+        // Apply any knockback impulse after our movement/animation.
+        this.applyKnockback(dt);
     }
 
     attack(target: Entity) {

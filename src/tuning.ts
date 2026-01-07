@@ -120,8 +120,15 @@ export const TUNING = {
     HIT_PARTICLE_MAX_ACTIVE: 220,
 
     // Basic knockback distances (world units)
-    HIT_KNOCKBACK: 0.22, // player -> enemies
-    PLAYER_HIT_KNOCKBACK: 0.14, // enemies -> player
+    HIT_KNOCKBACK: 0.30, // player -> enemies
+    PLAYER_HIT_KNOCKBACK: 0.20, // enemies -> player
+
+    // Knockback feel (impulse-based)
+    // HIT_KNOCKBACK / PLAYER_HIT_KNOCKBACK are interpreted as distances; these control how that distance is applied.
+    KNOCKBACK_DURATION: 0.09, // seconds (short = snappier shove)
+    KNOCKBACK_DECAY_PER_SEC: 18, // higher = stops sooner
+    KNOCKBACK_MAX_SPEED: 18, // world units / second cap to prevent crazy launches
+    KNOCKBACK_IMMEDIATE_FRACTION: 0.35, // 0..1 applied instantly, rest as impulse
 
     // Damage thresholds used to scale feedback
     JUICE_DAMAGE_REFERENCE: 25,

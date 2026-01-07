@@ -196,5 +196,8 @@ export class Player extends Entity {
             this.mesh.position.y = THREE.MathUtils.lerp(this.mesh.position.y, TUNING.CHARACTER_INITIAL_Y, lerpAlpha);
             this.mesh.scale.lerp(new THREE.Vector3(1, 1, 1), lerpAlpha);
         }
+
+        // Apply knockback after movement so getting hit can actually push you.
+        this.applyKnockback(dt);
     }
 }

@@ -18,6 +18,8 @@ export abstract class Entity {
     public mass: number = 1;
     protected flashTimer: number = 0;
     protected scene: THREE.Scene | null = null;
+    // Knockback (impulse-style) state
+    protected knockbackVel: THREE.Vector3 = new THREE.Vector3(); // world units / second (XZ only)
     // Death animation state
     protected deathTimer: number = 0; // seconds
     protected deathDuration: number = TUNING.DEATH_FADE_DURATION;
@@ -100,19 +102,71 @@ export abstract class Entity {
         });
     }
 
+    protected applyKnockback(dt: number) {
+        // dt is in reference frames (60fps). Convert to seconds.
+        const dtSeconds = dt / 60;
+        if (dtSeconds <= 0) return;
+
+        // Only apply on XZ plane.
+        this.knockbackVel.y = 0;
+        if (this.knockbackVel.lengthSq() < 1e-6) return;
+
+        const y = this.position.y;
+        this.position.addScaledVector(this.knockbackVel, dtSeconds);
+        this.position.y = y;
+
+        // Exponential decay feels nice and frame-rate independent.
+        const decayPerSec = TUNING.KNOCKBACK_DECAY_PER_SEC ?? 18;
+        const damp = Math.exp(-Math.max(0, decayPerSec) * dtSeconds);
+        this.knockbackVel.multiplyScalar(damp);
+
+        // Snap tiny velocities to zero to avoid endless micro-sliding.
+        if (this.knockbackVel.lengthSq() < 1e-5) {
+            this.knockbackVel.set(0, 0, 0);
+        }
+    }
+
     takeDamage(amount: number, hit?: { from?: THREE.Vector3; knockback?: number; crit?: boolean }) {
         if (this.isDead || this.isDying) return;
 
-        // Basic knockback (XZ plane) for better hit feel.
+        // Knockback (impulse style) for better hit feel.
+        // Knockback values are interpreted as *distance* in world units, then converted to an impulse.
         if (hit?.from) {
             const dir = new THREE.Vector3().subVectors(this.position, hit.from).setY(0);
             if (dir.lengthSq() > 1e-6) {
                 dir.normalize();
-                const k = hit.knockback ?? (TUNING.HIT_KNOCKBACK ?? 0.22);
-                // keep current Y (some entities bounce)
-                const y = this.position.y;
-                this.position.addScaledVector(dir, k);
-                this.position.y = y;
+
+                const baseDist = hit.knockback ?? (TUNING.HIT_KNOCKBACK ?? 0.22);
+                const dmgRef = TUNING.JUICE_DAMAGE_REFERENCE ?? 25;
+                const dmg01 = Math.max(0, Math.min(1, (amount || 0) / Math.max(1e-6, dmgRef)));
+
+                // Scale knockback slightly with damage and crits.
+                let dist = baseDist * (0.7 + 0.8 * dmg01) * (hit.crit ? 1.25 : 1);
+
+                // Heavier entities resist knockback.
+                const m = Math.max(0.25, this.mass || 1);
+                dist = dist / Math.sqrt(m);
+
+                // Apply a small immediate shove (feels snappier), and the rest as a decaying impulse.
+                const immediateFrac = TUNING.KNOCKBACK_IMMEDIATE_FRACTION ?? 0.35;
+                const immediate = dist * Math.max(0, Math.min(1, immediateFrac));
+                const deferred = Math.max(0, dist - immediate);
+
+                if (immediate > 0) {
+                    const y = this.position.y;
+                    this.position.addScaledVector(dir, immediate);
+                    this.position.y = y;
+                }
+
+                if (deferred > 0) {
+                    const duration = Math.max(0.01, TUNING.KNOCKBACK_DURATION ?? 0.09);
+                    const impulseSpeed = deferred / duration; // world units per second
+                    this.knockbackVel.addScaledVector(dir, impulseSpeed);
+
+                    const maxSpeed = TUNING.KNOCKBACK_MAX_SPEED ?? 18;
+                    const len = this.knockbackVel.length();
+                    if (len > maxSpeed) this.knockbackVel.multiplyScalar(maxSpeed / Math.max(1e-6, len));
+                }
             }
         }
 

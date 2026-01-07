@@ -125,6 +125,9 @@ export class Undead extends Entity {
                 this.attack(this.target);
             }
         }
+
+        // Apply any knockback impulse after our movement/attack logic.
+        this.applyKnockback(dt);
     }
 
     attack(target: Entity) {

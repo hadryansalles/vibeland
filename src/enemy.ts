@@ -55,6 +55,9 @@ export class Enemy extends Entity {
             // Move towards the target
             this.mesh.position.add(direction.multiplyScalar(TUNING.ENEMY_SPEED * dt));
         }
+
+        // Apply any knockback impulse after our movement.
+        this.applyKnockback(dt);
     }
 
     attack(target: Entity) {
