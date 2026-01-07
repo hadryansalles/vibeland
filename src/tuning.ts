@@ -97,6 +97,44 @@ export const TUNING = {
     DEATH_FADE_DURATION: 0.3, // seconds to fully fade out
     DEATH_ROTATION_ANGLE_DEGREES: 90,
 
+    // --- Juice / feel ---
+    // Hit-stop (time scale) applied briefly on big hits / kills.
+    HITSTOP_DURATION: 0.045, // seconds
+    HITSTOP_SCALE: 0.05, // 0..1
+    ENEMY_DEATH_HITSTOP: 0.05, // seconds
+    PLAYER_DEATH_HITSTOP: 0.08, // seconds
+
+    // Camera shake (screen-space feel via camera position offset)
+    CAMERA_SHAKE_MAX: 0.45,
+    CAMERA_SHAKE_DECAY_PER_SEC: 2.6,
+    CAMERA_SHAKE_ENEMY_HIT: 0.14,
+    CAMERA_SHAKE_PLAYER_HIT: 0.22,
+
+    // Camera zoom punch (orthographic zoom multiplier)
+    CAMERA_ZOOM_PUNCH: 0.06,
+    CAMERA_ZOOM_RETURN_PER_SEC: 8,
+
+    // Damage numbers / hit VFX
+    DAMAGE_NUMBER_TTL: 0.75, // seconds
+    HIT_RING_DURATION: 0.18, // seconds
+    HIT_PARTICLE_MAX_ACTIVE: 220,
+
+    // Basic knockback distances (world units)
+    HIT_KNOCKBACK: 0.22, // player -> enemies
+    PLAYER_HIT_KNOCKBACK: 0.14, // enemies -> player
+
+    // Damage thresholds used to scale feedback
+    JUICE_DAMAGE_REFERENCE: 25,
+    JUICE_BIG_HIT_DAMAGE: 25,
+
+    // Player survivability feel
+    PLAYER_IFRAMES: 0.25, // seconds of invulnerability after taking damage
+    PLAYER_ON_KILL_HEAL: 6, // heal per kill (small, helps the "flow")
+
+    // Player crits (mostly a feel/feedback mechanic)
+    PLAYER_CRIT_CHANCE: 0.12,
+    PLAYER_CRIT_MULT: 1.6,
+
     // Audio (SFX)
     // Note: browsers require a user gesture (click/tap/keydown) before audio can start.
     SFX_VOLUME: 0.25, // master SFX gain (0..1)

@@ -169,14 +169,14 @@ export class Undead extends Entity {
         // Apply damage only if inside rectangle (use same dash-aware length)
         const effectiveLength = this.lungeTimeLeft > 0 ? this.getDashDistance() : length;
         if (this.isPointInForwardRect(target.position, width, effectiveLength)) {
-            target.takeDamage(TUNING.UNDEAD_ATTACK_DAMAGE);
+            target.takeDamage(TUNING.UNDEAD_ATTACK_DAMAGE, { from: this.position, knockback: TUNING.PLAYER_HIT_KNOCKBACK });
         }
 
         this.attackCooldown = TUNING.UNDEAD_ATTACK_COOLDOWN;
     }
 
-    takeDamage(amount: number) {
-        super.takeDamage(amount);
+    override takeDamage(amount: number, hit?: { from?: THREE.Vector3; knockback?: number; crit?: boolean }) {
+        super.takeDamage(amount, hit);
         this.lastDamagedTimer = 0;
     }
 

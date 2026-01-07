@@ -12,6 +12,7 @@ import { Undead } from './undead';
 import { Entity } from './entity';
 import { createWorld } from './world';
 import { audio } from './audio';
+import { juice } from './juice';
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -40,6 +41,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true; // Enable shadows
 renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
 document.body.appendChild(renderer.domElement);
+
+// Juice / feel manager (hit-stop, shake, damage numbers, particles)
+juice.init({ scene, camera, rendererEl: renderer.domElement });
 
 // Audio: restore settings and satisfy browser gesture requirements.
 audio.initFromStorage();
@@ -188,6 +192,27 @@ respawnOverlay.innerHTML = `
 respawnOverlay.style.display = 'none';
 document.body.appendChild(respawnOverlay);
 
+// Minimal HUD (HP + SFX state)
+const hud = document.createElement('div');
+hud.id = 'hud';
+hud.innerHTML = `
+  <div class="hud-panel">
+    <div class="hud-row">
+      <div class="hud-label">HP</div>
+      <div class="hud-bar"><div class="hud-bar-fill" id="hud-hp-fill"></div></div>
+      <div class="hud-text" id="hud-hp-text"></div>
+    </div>
+    <div class="hud-row hud-row-small">
+      <div class="hud-hint">Hold LMB: auto-attack · Space: attack · M: toggle SFX (<span id="hud-sfx"></span>)</div>
+    </div>
+  </div>
+`;
+document.body.appendChild(hud);
+const hudHpFill = document.getElementById('hud-hp-fill') as HTMLDivElement;
+const hudHpText = document.getElementById('hud-hp-text') as HTMLDivElement;
+const hudSfx = document.getElementById('hud-sfx') as HTMLSpanElement;
+hudSfx.textContent = audio.getEnabled() ? 'on' : 'off';
+
 let deathHandled = false;
 let respawnTimer = 0;
 const frozenCameraPos = new THREE.Vector3();
@@ -233,6 +258,7 @@ window.addEventListener('keydown', (e) => {
   // Toggle SFX mute (press M)
   if (e.code === 'KeyM' && !e.repeat) {
     audio.setEnabled(!audio.getEnabled());
+    hudSfx.textContent = audio.getEnabled() ? 'on' : 'off';
   }
 });
 
@@ -349,12 +375,24 @@ function animate(time: number) {
   // Initialize last time on first frame
   if (_lastFrameTime === null) _lastFrameTime = time;
 
-  // Delta in seconds, clamped to avoid huge steps (e.g., when tab was inactive)
-  let deltaSeconds = Math.min((time - _lastFrameTime) / 1000, 0.1);
+  // Real delta in seconds, clamped to avoid huge steps (e.g., when tab was inactive)
+  const realDeltaSeconds = Math.min((time - _lastFrameTime) / 1000, 0.1);
   _lastFrameTime = time;
+
+  // Update juice using real time (so shake/particles keep moving during hit-stop)
+  juice.update(realDeltaSeconds);
+
+  // Apply hit-stop as a time scale (only while alive)
+  const timeScale = (player.isDead || (player as any).isDying) ? 1 : juice.getTimeScale();
+  const deltaSeconds = realDeltaSeconds * timeScale;
 
   // Convert to "reference frames" assuming 60 FPS so existing tuning remains usable
   const dt = deltaSeconds * 60;
+
+  // HUD update
+  const hp01 = player.maxHealth > 0 ? player.health / player.maxHealth : 0;
+  if (hudHpFill) hudHpFill.style.width = `${Math.max(0, Math.min(1, hp01)) * 100}%`;
+  if (hudHpText) hudHpText.textContent = `${Math.max(0, Math.round(player.health))} / ${Math.round(player.maxHealth)}`;
 
   const inputDirection = new THREE.Vector3();
   const cameraForward = new THREE.Vector3();
@@ -426,15 +464,22 @@ function animate(time: number) {
     }
 
     // Keep camera and light fixed at the moment of death
-    camera.position.copy(frozenCameraPos);
+    camera.position.copy(frozenCameraPos).add(juice.getCameraOffset());
     camera.lookAt(frozenLookAt);
     directionalLight.position.copy(frozenLookAt).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
     directionalLight.target.position.copy(frozenLookAt);
     directionalLight.target.updateMatrixWorld();
   } else {
     const targetPosition = new THREE.Vector3(player.position.x, TUNING.CHARACTER_INITIAL_Y, player.position.z);
-    camera.position.copy(targetPosition).add(TUNING.ISO_OFFSET);
+    camera.position.copy(targetPosition).add(TUNING.ISO_OFFSET).add(juice.getCameraOffset());
     camera.lookAt(targetPosition);
+
+    // Zoom punch (orthographic camera)
+    const desiredZoom = juice.getZoomMultiplier();
+    if (Math.abs(camera.zoom - desiredZoom) > 1e-3) {
+      camera.zoom = desiredZoom;
+      camera.updateProjectionMatrix();
+    }
 
     // Update directional light to follow character (keep shadows in view)
     directionalLight.position.copy(targetPosition).add(TUNING.DIRECTIONAL_LIGHT_POSITION);

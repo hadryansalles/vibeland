@@ -5,10 +5,12 @@ import { convertModelToTHREEJS } from './model';
 import type { Model } from './model';
 import { createSectorMesh } from './attack_visuals';
 import { audio } from './audio';
+import { juice } from './juice';
 
 export class Player extends Entity {
     private jumpTime: number = 0;
     private attackCooldown: number = 0;
+    private invulnLeft: number = 0; // seconds
 
     constructor() {
         const playerModel: Model = {
@@ -48,8 +50,29 @@ export class Player extends Entity {
 
         if (this.isDead) return;
 
+        // Invulnerability frames (prevents being instantly deleted by a dogpile)
+        if (this.invulnLeft > 0) {
+            this.invulnLeft = Math.max(0, this.invulnLeft - dt / 60);
+            // Blink while invulnerable
+            const blink = Math.floor(this.invulnLeft * 22) % 2 === 0;
+            this.mesh.visible = blink;
+        } else {
+            this.mesh.visible = true;
+        }
+
         if (this.attackCooldown > 0) {
             this.attackCooldown -= dt / 60; // dt is in reference frames (60fps)
+        }
+    }
+
+    override takeDamage(amount: number, hit?: { from?: THREE.Vector3; knockback?: number; crit?: boolean }) {
+        if (this.isDead || this.isDying) return;
+        if (this.invulnLeft > 0) return;
+
+        super.takeDamage(amount, hit);
+        // Only grant i-frames if we survived the hit.
+        if (!this.isDead && !this.isDying) {
+            this.invulnLeft = TUNING.PLAYER_IFRAMES;
         }
     }
 
@@ -109,7 +132,21 @@ export class Player extends Entity {
                 toEnemy.normalize();
                 const dot = dir.dot(toEnemy);
                 if (dot >= cosHalf) {
-                    enemy.takeDamage(TUNING.PLAYER_ATTACK_DAMAGE);
+                    const wasDying = enemy.isDying;
+                    const crit = Math.random() < (TUNING.PLAYER_CRIT_CHANCE ?? 0);
+                    const dmg = crit
+                        ? Math.round(TUNING.PLAYER_ATTACK_DAMAGE * (TUNING.PLAYER_CRIT_MULT ?? 1.6))
+                        : TUNING.PLAYER_ATTACK_DAMAGE;
+                    enemy.takeDamage(dmg, { from: this.position, knockback: TUNING.HIT_KNOCKBACK ?? 0.22, crit });
+
+                    // Tiny sustain loop: heal a bit on kill to keep the flow.
+                    if (!wasDying && enemy.isDying) {
+                        const heal = TUNING.PLAYER_ON_KILL_HEAL ?? 0;
+                        if (heal > 0) {
+                            this.health = Math.min(this.maxHealth, this.health + heal);
+                            juice.onHeal({ pos: this.position.clone(), amount: heal });
+                        }
+                    }
                 }
             }
         });

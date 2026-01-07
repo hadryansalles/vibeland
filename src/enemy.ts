@@ -62,7 +62,7 @@ export class Enemy extends Entity {
 
         audio.playEnemyAttack('enemy');
 
-        target.takeDamage(TUNING.ENEMY_ATTACK_DAMAGE);
+        target.takeDamage(TUNING.ENEMY_ATTACK_DAMAGE, { from: this.position, knockback: TUNING.PLAYER_HIT_KNOCKBACK });
         this.attackCooldown = TUNING.ENEMY_ATTACK_COOLDOWN;
 
         // Direction toward target on XZ plane

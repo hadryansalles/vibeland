@@ -92,7 +92,7 @@ export class Slime extends Entity {
 
         audio.playEnemyAttack('slime');
 
-        target.takeDamage(TUNING.SLIME_ATTACK_DAMAGE);
+        target.takeDamage(TUNING.SLIME_ATTACK_DAMAGE, { from: this.position, knockback: TUNING.PLAYER_HIT_KNOCKBACK });
         this.attackCooldown = TUNING.SLIME_ATTACK_COOLDOWN;
 
         // Small visual wedge in front of slime
