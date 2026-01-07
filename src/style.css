@@ -7,3 +7,44 @@ body {
 canvas {
   display: block;
 }
+
+/* Respawn / death overlay */
+#respawn-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  z-index: 9999;
+  color: #fff;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+#respawn-overlay .respawn-box {
+  background: rgba(24,24,24,0.95);
+  padding: 20px 26px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 240px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+
+#respawn-overlay h1 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+}
+
+#respawn-overlay p { margin: 0; }
+
+#respawn-overlay button {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #2b8cff;
+  color: white;
+  cursor: pointer;
+}
+
+#respawn-overlay button:hover { filter: brightness(0.95); }

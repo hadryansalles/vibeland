@@ -25,11 +25,30 @@ export const TUNING = {
     CHARACTER_SIZE: 1,
     CHARACTER_COLOR: 0xaaaaaa,
     CHARACTER_INITIAL_Y: 0.5,
+    PLAYER_HEALTH: 100,
+    PLAYER_ATTACK_RANGE: 2,
+    PLAYER_ATTACK_DAMAGE: 50,
+    PLAYER_ATTACK_COOLDOWN: 0.5, // Seconds
+    PLAYER_ATTACK_ARC_ANGLE: 90, // degrees
+    PLAYER_ATTACK_SEGMENTS: 24,
+
     // Enemy
     ENEMY_SIZE: 1,
     ENEMY_COLOR: 0xff0000,
-    ENEMY_SPEED: 2.0, // Units per second
+    ENEMY_SPEED: 0.05, // Units per second (reduced to make enemies slower)
     ENEMY_INITIAL_POSITION: new THREE.Vector3(5, 0.5, 5),    
+    ENEMY_HEALTH: 50,
+    ENEMY_ATTACK_RANGE: 1.2,
+    ENEMY_ATTACK_DAMAGE: 10,
+    ENEMY_ATTACK_COOLDOWN: 1.0, // Seconds
+    ENEMY_ATTACK_ARC_ANGLE: 90,
+    ENEMY_ATTACK_SEGMENTS: 12,
+
+    // Visuals
+    ATTACK_VISUAL_DURATION: 0.2, // Seconds
+    DAMAGE_FLASH_DURATION: 0.1, // Seconds
+    DAMAGE_FLASH_COLOR: 0xffffff,
+
     // Movement
     MOVEMENT_SPEED: 0.10,
     // Rotation smoothing when changing facing direction (per-frame base lerp)

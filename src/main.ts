@@ -5,9 +5,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { TUNING } from './tuning'
-import { convertModelToTHREEJS } from './model';
-import type { Model } from './model';
-import { BaseEnemy } from './base_enemy';
+import { Player } from './player';
+import { Enemy } from './enemy';
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -62,44 +61,20 @@ plane.rotation.x = -Math.PI / 2;
 plane.receiveShadow = true; // Ground receives shadows
 scene.add(plane);
 
-// Player Character (composed from small cubes)
-const playerModel: Model = {
-  cubes: [
-    // torso
-    { position: [0, 0, 0], size: [0.6, 0.5, 0.4], color: [0.15, 0.6, 0.9] },
-    // head
-    { position: [0, 0.33, 0], size: [0.33, 0.33, 0.33], color: [1.0, 0.9, 0.8] },
-    // arms
-    { position: [-0.45, 0.05, 0], size: [0.18, 0.45, 0.18], color: [0.15, 0.6, 0.9] },
-    { position: [0.45, 0.05, 0], size: [0.18, 0.45, 0.18], color: [0.15, 0.6, 0.9] },
-    // legs
-    { position: [-0.17, -0.35, 0], size: [0.2, 0.3, 0.2], color: [0.08, 0.08, 0.08] },
-    { position: [0.17, -0.35, 0], size: [0.2, 0.3, 0.2], color: [0.08, 0.08, 0.08] },
-    // backpack
-    { position: [0, 0, -0.28], size: [0.4, 0.5, 0.16], color: [0.8, 0.2, 0.2] },
-  ],
-};
-
-const player = convertModelToTHREEJS(playerModel);
-player.position.y = TUNING.CHARACTER_INITIAL_Y;
-scene.add(player);
-
-const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshStandardMaterial({ color: 0xff0000 })
-);
-cube.castShadow = true;
-cube.receiveShadow = true;
-scene.add(cube);
+// Player Character
+const player = new Player();
+player.addToScene(scene);
 
 // Enemy
-const enemies: BaseEnemy[] = [];
+const enemies: Enemy[] = [];
 for (let i = 0; i < 100; i++) {
     const angle = Math.random() * Math.PI * 2;
     const radius = 10 + Math.random() * 20; // Spawn between 10 and 30 units away
     const x = Math.cos(angle) * radius;
     const z = Math.sin(angle) * radius;
-    enemies.push(new BaseEnemy(scene, new THREE.Vector3(x, 0.5, z), cube));
+    const enemy = new Enemy(new THREE.Vector3(x, 0.5, z), player);
+    enemy.addToScene(scene);
+    enemies.push(enemy);
 }
 
 // Post-processing
@@ -116,6 +91,51 @@ composer.addPass(ssaoPass);
 const outputPass = new OutputPass();
 composer.addPass(outputPass);
 
+// Respawn / death UI and state
+const PLAYER_RESPAWN_TIME = 3; // seconds
+const respawnOverlay = document.createElement('div');
+respawnOverlay.id = 'respawn-overlay';
+respawnOverlay.innerHTML = `
+  <div class="respawn-box">
+    <h1>You Died</h1>
+    <p id="respawn-countdown">Respawn in ${PLAYER_RESPAWN_TIME}</p>
+    <button id="respawn-button">Respawn Now</button>
+  </div>
+`;
+respawnOverlay.style.display = 'none';
+document.body.appendChild(respawnOverlay);
+
+let deathHandled = false;
+let respawnTimer = 0;
+const frozenCameraPos = new THREE.Vector3();
+const frozenLookAt = new THREE.Vector3();
+
+function doRespawn() {
+  const spawnPos = new THREE.Vector3(0, TUNING.CHARACTER_INITIAL_Y, 0);
+  // Use revive if available
+  if ((player as any).revive) {
+    (player as any).revive(spawnPos);
+  } else {
+    player.isDead = false;
+    player.health = (player as any).maxHealth ?? TUNING.PLAYER_HEALTH;
+    player.mesh.visible = true;
+    player.mesh.position.copy(spawnPos);
+  }
+  respawnOverlay.style.display = 'none';
+  deathHandled = false;
+  respawnTimer = 0;
+
+  const targetPosition = new THREE.Vector3(player.position.x, TUNING.CHARACTER_INITIAL_Y, player.position.z);
+  camera.position.copy(targetPosition).add(TUNING.ISO_OFFSET);
+  camera.lookAt(targetPosition);
+  directionalLight.position.copy(targetPosition).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
+  directionalLight.target.position.copy(targetPosition);
+  directionalLight.target.updateMatrixWorld();
+}
+
+const respawnButton = respawnOverlay.querySelector('#respawn-button') as HTMLButtonElement;
+respawnButton.addEventListener('click', () => doRespawn());
+
 // Controls state
 const keys: { [key: string]: boolean } = {};
 
@@ -125,6 +145,35 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('keyup', (e) => {
   keys[e.code] = false;
+});
+
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return; // only left click
+
+  // Convert mouse to NDC
+  const mouse = new THREE.Vector2(
+    (e.clientX / window.innerWidth) * 2 - 1,
+    -(e.clientY / window.innerHeight) * 2 + 1
+  );
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  // Intersect with horizontal plane at CHARACTER_INITIAL_Y
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TUNING.CHARACTER_INITIAL_Y);
+  const intersectPoint = new THREE.Vector3();
+  const hit = raycaster.ray.intersectPlane(plane, intersectPoint);
+  if (hit) {
+    const dir = new THREE.Vector3().subVectors(intersectPoint, player.position).setY(0);
+    if (dir.lengthSq() < 1e-6) {
+      player.attack(enemies);
+    } else {
+      dir.normalize();
+      player.attack(enemies, dir);
+    }
+  } else {
+    player.attack(enemies);
+  }
 });
 
 // Resize handler
@@ -143,7 +192,6 @@ window.addEventListener('resize', () => {
 });
 
 // Animation Loop (time-step independent)
-let jumpTime = 0;
 let _lastFrameTime: number | null = null; // ms
 
 function animate(time: number) {
@@ -160,7 +208,7 @@ function animate(time: number) {
   // Convert to "reference frames" assuming 60 FPS so existing tuning remains usable
   const dt = deltaSeconds * 60;
 
-  const direction = new THREE.Vector3();
+  const inputDirection = new THREE.Vector3();
   const cameraForward = new THREE.Vector3();
   const cameraRight = new THREE.Vector3();
 
@@ -172,83 +220,81 @@ function animate(time: number) {
   // Get camera right vector
   cameraRight.crossVectors(cameraForward, new THREE.Vector3(0, 1, 0));
 
-  let moving = false;
-  
   if (keys['ArrowUp'] || keys['KeyW']) {
-    direction.add(cameraForward);
-    moving = true;
+    inputDirection.add(cameraForward);
   }
   if (keys['ArrowDown'] || keys['KeyS']) {
-    direction.sub(cameraForward);
-    moving = true;
+    inputDirection.sub(cameraForward);
   }
   if (keys['ArrowLeft'] || keys['KeyA']) {
-    direction.sub(cameraRight);
-    moving = true;
+    inputDirection.sub(cameraRight);
   }
   if (keys['ArrowRight'] || keys['KeyD']) {
-    direction.add(cameraRight);
-    moving = true;
+    inputDirection.add(cameraRight);
   }
 
-  if (moving) {
-    // Normalize to ensure consistent speed in all directions.
-    // Scale by deltaFrames so tuning values (which were per-frame) remain compatible.
-    direction.normalize().multiplyScalar(TUNING.MOVEMENT_SPEED * dt);
-    player.position.add(direction);
-
-    // Advance jump time scaled by delta frames
-    jumpTime += TUNING.JUMP_SPEED_INCREMENT * dt;
-
-    // Bouncing motion
-    const bounce = Math.abs(Math.sin(jumpTime));
-    player.position.y = TUNING.CHARACTER_INITIAL_Y + bounce * TUNING.JUMP_BOUNCE_HEIGHT;
-
-    // Squeeze and stretch
-    const squashFactor = TUNING.JUMP_SQUASH_FACTOR;
-    const scaleY = 1 - squashFactor + (bounce * squashFactor * 2);
-    const scaleXZ = 1 / Math.sqrt(scaleY);
-    player.scale.set(scaleXZ, scaleY, scaleXZ);
-
-      // Rotate player to face movement direction (smooth)
-      // Use XZ-plane projection of the movement vector to compute desired yaw.
-      const moveDir = new THREE.Vector3(direction.x, 0, direction.z);
-      if (moveDir.lengthSq() > 1e-6) {
-        moveDir.normalize();
-        const desiredYaw = Math.atan2(moveDir.x, moveDir.z);
-
-        // Time-corrected lerp alpha so smoothing is framerate independent (same pattern as jump lerp)
-        const baseLerp = TUNING.ROTATION_LERP_FACTOR;
-        const lerpAlpha = 1 - Math.pow(1 - baseLerp, dt);
-
-        const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), desiredYaw);
-        player.quaternion.slerp(targetQuat, lerpAlpha);
-      }
+  // Only allow player to update/move/attack while alive
+  if (!player.isDead) {
+    player.update(dt);
+    player.move(inputDirection, dt);
+    if (keys['Space']) {
+      player.attack(enemies);
+    }
   } else {
-    // Reset jump time and smoothly lerp back to resting pose.
-    jumpTime = 0;
-
-    // Convert per-frame lerp factor into a time-corrected alpha so smoothing is independent of FPS
-    const baseLerp = TUNING.JUMP_LERP_FACTOR; // assumed per-frame
-    const lerpAlpha = 1 - Math.pow(1 - baseLerp, dt);
-
-    player.position.y = THREE.MathUtils.lerp(player.position.y, TUNING.CHARACTER_INITIAL_Y, lerpAlpha);
-    player.scale.lerp(new THREE.Vector3(1, 1, 1), lerpAlpha);
+    // still let update run minimal flash/cleanup
+    player.update(dt);
   }
 
-  // Stable target for camera and lights (ignoring jump height)
-  const targetPosition = new THREE.Vector3(player.position.x, TUNING.CHARACTER_INITIAL_Y, player.position.z);
+  // Camera / light behavior: freeze when dead, otherwise follow player
+  if (player.isDead) {
+    if (!deathHandled) {
+      deathHandled = true;
+      respawnTimer = PLAYER_RESPAWN_TIME;
+      frozenCameraPos.copy(camera.position);
+      frozenLookAt.set(player.position.x, TUNING.CHARACTER_INITIAL_Y, player.position.z);
+      respawnOverlay.style.display = 'flex';
+      const countdownEl = document.getElementById('respawn-countdown');
+      if (countdownEl) countdownEl.textContent = `Respawn in ${Math.ceil(respawnTimer)}`;
+    } else {
+      respawnTimer -= deltaSeconds;
+      const countdownEl = document.getElementById('respawn-countdown');
+      if (countdownEl) countdownEl.textContent = `Respawn in ${Math.max(0, Math.ceil(respawnTimer))}`;
+      if (respawnTimer <= 0) doRespawn();
+    }
 
-  // Camera follow with isometric offset
-  camera.position.copy(targetPosition).add(TUNING.ISO_OFFSET);
-  camera.lookAt(targetPosition);
+    // Keep camera and light fixed at the moment of death
+    camera.position.copy(frozenCameraPos);
+    camera.lookAt(frozenLookAt);
+    directionalLight.position.copy(frozenLookAt).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
+    directionalLight.target.position.copy(frozenLookAt);
+    directionalLight.target.updateMatrixWorld();
+  } else {
+    const targetPosition = new THREE.Vector3(player.position.x, TUNING.CHARACTER_INITIAL_Y, player.position.z);
+    camera.position.copy(targetPosition).add(TUNING.ISO_OFFSET);
+    camera.lookAt(targetPosition);
 
-  // Update directional light to follow character (keep shadows in view)
-  directionalLight.position.copy(targetPosition).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
-  directionalLight.target.position.copy(targetPosition);
-  directionalLight.target.updateMatrixWorld();
+    // Update directional light to follow character (keep shadows in view)
+    directionalLight.position.copy(targetPosition).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
+    directionalLight.target.position.copy(targetPosition);
+    directionalLight.target.updateMatrixWorld();
 
-  enemies.forEach(enemy => enemy.update(dt));
+    // Ensure overlay is hidden if revived outside of the respawn flow
+    if (deathHandled) {
+      deathHandled = false;
+      respawnOverlay.style.display = 'none';
+    }
+  }
+
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const enemy = enemies[i];
+    if (enemy.isDead) {
+      // Small chance to remove from array, or just leave it hidden
+      // scene.remove(enemy.mesh); 
+      // enemies.splice(i, 1);
+      continue;
+    }
+    enemy.update(dt);
+  }
 
   composer.render();
 }
