@@ -26,9 +26,15 @@ export class Enemy extends Entity {
     }
 
     update(dt: number) {
-        if (!this.target || this.isDead || this.target.isDead) return;
-
         this.updateFlash(dt);
+
+        // If playing death animation, update it and skip other behavior
+        if (this.isDying) {
+            this.updateDeath(dt);
+            return;
+        }
+
+        if (!this.target || this.isDead || this.target.isDead || this.target.isDying) return;
 
         if (this.attackCooldown > 0) {
             this.attackCooldown -= dt / 60;
@@ -51,7 +57,7 @@ export class Enemy extends Entity {
     }
 
     attack(target: Entity) {
-        if (this.attackCooldown > 0 || target.isDead || !this.scene) return;
+        if (this.attackCooldown > 0 || this.isDead || this.isDying || target.isDead || target.isDying || !this.scene) return;
 
         target.takeDamage(TUNING.ENEMY_ATTACK_DAMAGE);
         this.attackCooldown = TUNING.ENEMY_ATTACK_COOLDOWN;

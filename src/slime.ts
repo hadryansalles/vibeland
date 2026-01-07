@@ -41,9 +41,16 @@ export class Slime extends Entity {
     }
 
     update(dt: number) {
-        // Keep flash update running but otherwise do nothing while dead
+        // Keep flash update running
         this.updateFlash(dt);
-        if (this.isDead || !this.target || this.target.isDead) return;
+
+        // If playing death animation, drive it and skip other behavior
+        if (this.isDying) {
+            this.updateDeath(dt);
+            return;
+        }
+
+        if (this.isDead || !this.target || this.target.isDead || this.target.isDying) return;
 
         if (this.attackCooldown > 0) this.attackCooldown -= dt / 60;
 
@@ -80,7 +87,7 @@ export class Slime extends Entity {
     }
 
     attack(target: Entity) {
-        if (this.attackCooldown > 0 || this.isDead || target.isDead || !this.scene) return;
+        if (this.attackCooldown > 0 || this.isDead || this.isDying || target.isDead || target.isDying || !this.scene) return;
 
         target.takeDamage(TUNING.SLIME_ATTACK_DAMAGE);
         this.attackCooldown = TUNING.SLIME_ATTACK_COOLDOWN;

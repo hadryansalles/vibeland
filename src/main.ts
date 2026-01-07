@@ -226,6 +226,7 @@ window.addEventListener('keyup', (e) => {
 
 window.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return; // only left click
+  if (player.isDead || (player as any).isDying) return;
 
   mouseDown = true;
 
@@ -284,10 +285,10 @@ let _lastFrameTime: number | null = null; // ms
 function resolveEntityCollisions(entities: Entity[]) {
   for (let i = 0; i < entities.length; i++) {
     const a = entities[i];
-    if (!a || a.isDead) continue;
+    if (!a || a.isDead || (a as any).isDying) continue;
     for (let j = i + 1; j < entities.length; j++) {
       const b = entities[j];
-      if (!b || b.isDead) continue;
+      if (!b || b.isDead || (b as any).isDying) continue;
 
       const rA = a.collisionRadius ?? 0.5;
       const rB = b.collisionRadius ?? 0.5;
@@ -364,20 +365,20 @@ function animate(time: number) {
     inputDirection.add(cameraRight);
   }
 
-  // Only allow player to update/move/attack while alive
-  if (!player.isDead) {
+  // Only allow player to move/attack while fully alive and not dying.
+  if (!player.isDead && !(player as any).isDying) {
     player.update(dt);
     player.move(inputDirection, dt);
     if (keys['Space']) {
       player.attack(enemies);
     }
   } else {
-    // still let update run minimal flash/cleanup
+    // still let update run (handles flash or death animation)
     player.update(dt);
   }
 
   // Auto-attack while left mouse button is held down
-  if (mouseDown && !player.isDead) {
+  if (mouseDown && !player.isDead && !(player as any).isDying) {
     if (lastAttackPoint) {
       const dir = new THREE.Vector3().subVectors(lastAttackPoint, player.position).setY(0);
       if (dir.lengthSq() < 1e-6) {

@@ -93,5 +93,8 @@ export const TUNING = {
     SSAO_KERNEL_RADIUS: 5,
     SSAO_MIN_DISTANCE: 0.0001,
     SSAO_MAX_DISTANCE: 0.005,
+    // Death animation
+    DEATH_FADE_DURATION: 0.3, // seconds to fully fade out
+    DEATH_ROTATION_ANGLE_DEGREES: 90,
 };
 

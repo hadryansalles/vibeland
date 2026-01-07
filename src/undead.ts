@@ -50,7 +50,14 @@ export class Undead extends Entity {
 
     update(dt: number) {
         this.updateFlash(dt);
-        if (this.isDead || !this.target || this.target.isDead) return;
+
+        // If playing death animation, drive it and skip other behavior
+        if (this.isDying) {
+            this.updateDeath(dt);
+            return;
+        }
+
+        if (this.isDead || !this.target || this.target.isDead || this.target.isDying) return;
 
         if (this.attackCooldown > 0) this.attackCooldown -= dt / 60;
 
@@ -120,7 +127,7 @@ export class Undead extends Entity {
     }
 
     attack(target: Entity) {
-        if (this.attackCooldown > 0 || this.isDead || target.isDead || !this.scene) return;
+        if (this.attackCooldown > 0 || this.isDead || this.isDying || target.isDead || target.isDying || !this.scene) return;
         // Only apply damage if the target is inside the forward rectangular area
         const width = TUNING.UNDEAD_ATTACK_WIDTH;
         const length = TUNING.UNDEAD_ATTACK_RANGE;

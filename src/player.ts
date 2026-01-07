@@ -36,8 +36,15 @@ export class Player extends Entity {
     }
 
     update(dt: number) {
-        // Keep flash update running but otherwise do nothing while dead
+        // Keep flash update running
         this.updateFlash(dt);
+
+        // If playing death animation, run it and skip other behavior
+        if (this.isDying) {
+            this.updateDeath(dt);
+            return;
+        }
+
         if (this.isDead) return;
 
         if (this.attackCooldown > 0) {
@@ -46,7 +53,7 @@ export class Player extends Entity {
     }
 
     attack(enemies: Entity[], direction?: THREE.Vector3) {
-        if (this.attackCooldown > 0 || this.isDead || !this.scene) return;
+        if (this.attackCooldown > 0 || this.isDead || this.isDying || !this.scene) return;
 
         // Determine attack direction (XZ plane). If none provided, use the player's facing.
         let dir: THREE.Vector3;
@@ -92,7 +99,7 @@ export class Player extends Entity {
         // Damage detection: range + angle test
         const cosHalf = Math.cos(angleRad / 2);
         enemies.forEach(enemy => {
-            if (enemy.isDead) return;
+            if (enemy.isDead || enemy.isDying) return;
             const toEnemy = new THREE.Vector3().subVectors(enemy.position, this.position).setY(0);
             const dist = toEnemy.length();
             if (dist <= TUNING.PLAYER_ATTACK_RANGE) {
@@ -108,7 +115,7 @@ export class Player extends Entity {
     }
 
     move(direction: THREE.Vector3, dt: number) {
-        if (this.isDead) return;
+        if (this.isDead || this.isDying) return;
         if (direction.lengthSq() > 0) {
             // Normalize to ensure consistent speed in all directions.
             direction.normalize().multiplyScalar(TUNING.MOVEMENT_SPEED * dt);
