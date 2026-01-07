@@ -48,3 +48,16 @@ canvas {
 }
 
 #respawn-overlay button:hover { filter: brightness(0.95); }
+
+/* Hover tooltip shown when mouse is over an entity */
+#hover-overlay {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  z-index: 10000;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}

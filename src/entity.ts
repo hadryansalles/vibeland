@@ -3,16 +3,19 @@ import { TUNING } from './tuning';
 
 export abstract class Entity {
     public mesh: THREE.Object3D;
+    public displayName: string;
     public health: number;
     public maxHealth: number;
     public isDead: boolean = false;
     protected flashTimer: number = 0;
     protected scene: THREE.Scene | null = null;
 
-    constructor(mesh: THREE.Object3D, health: number = 100) {
+    constructor(mesh: THREE.Object3D, health: number = 100, displayName?: string) {
         this.mesh = mesh;
         this.health = health;
         this.maxHealth = health;
+        // default displayName to concrete class name if not provided
+        this.displayName = displayName ?? (this.constructor && (this.constructor as any).name) ?? 'Entity';
     }
 
     abstract update(dt: number): void;
@@ -82,6 +85,9 @@ export abstract class Entity {
 
     addToScene(scene: THREE.Scene) {
         this.scene = scene;
+        // attach a back-reference so raycasts can find the Entity from an Object3D
+        (this.mesh as any).userData = (this.mesh as any).userData || {};
+        (this.mesh as any).userData.entity = this;
         scene.add(this.mesh);
     }
 

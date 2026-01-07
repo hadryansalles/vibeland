@@ -87,6 +87,65 @@ composer.addPass(ssaoPass);
 const outputPass = new OutputPass();
 composer.addPass(outputPass);
 
+// Hover tooltip overlay (shows entity name / info when mouse over)
+const hoverOverlay = document.createElement('div');
+hoverOverlay.id = 'hover-overlay';
+// fixed on-screen position (doesn't follow cursor)
+hoverOverlay.style.display = 'flex';
+hoverOverlay.style.flexDirection = 'column';
+hoverOverlay.style.position = 'fixed';
+hoverOverlay.style.top = '12px';
+hoverOverlay.style.right = '12px';
+hoverOverlay.style.pointerEvents = 'none';
+hoverOverlay.style.zIndex = '10000';
+hoverOverlay.style.padding = '6px 8px';
+hoverOverlay.style.background = 'rgba(0,0,0,0.75)';
+hoverOverlay.style.color = '#fff';
+hoverOverlay.style.borderRadius = '6px';
+hoverOverlay.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial';
+hoverOverlay.style.fontSize = '12px';
+hoverOverlay.style.whiteSpace = 'nowrap';
+document.body.appendChild(hoverOverlay);
+
+const hoverRaycaster = new THREE.Raycaster();
+const hoverMouse = new THREE.Vector2();
+
+renderer.domElement.addEventListener('mousemove', (e) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  hoverMouse.set(x, y);
+  hoverRaycaster.setFromCamera(hoverMouse, camera);
+  const intersects = hoverRaycaster.intersectObjects(scene.children, true);
+
+  let foundEntity: any = null;
+  for (const it of intersects) {
+    let obj: any = it.object;
+    while (obj && !obj.userData?.entity) obj = obj.parent;
+    if (obj && obj.userData && obj.userData.entity) {
+      foundEntity = obj.userData.entity;
+      break;
+    }
+  }
+
+  if (foundEntity) {
+    const name = foundEntity.displayName ?? (foundEntity.constructor && foundEntity.constructor.name) ?? 'Entity';
+    const health = typeof foundEntity.health === 'number' && typeof foundEntity.maxHealth === 'number'
+      ? `${Math.max(0, Math.round(foundEntity.health))} / ${Math.round(foundEntity.maxHealth)}`
+      : '';
+    const status = foundEntity.isDead ? ' (Dead)' : '';
+    hoverOverlay.innerHTML = `<strong>${name}</strong>${status}${health ? `<div style="margin-top:4px;font-size:11px;opacity:0.9">HP: ${health}</div>` : ''}`;
+    // fixed overlay; just show it and update contents
+    hoverOverlay.style.opacity = '1';
+  } else {
+    hoverOverlay.style.opacity = '0';
+  }
+});
+
+renderer.domElement.addEventListener('mouseleave', () => {
+//   hoverOverlay.style.display = 'none';
+});
+
 // Respawn / death UI and state
 const PLAYER_RESPAWN_TIME = 3; // seconds
 const respawnOverlay = document.createElement('div');
