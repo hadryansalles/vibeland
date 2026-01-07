@@ -130,7 +130,6 @@ export const convertModelToTHREEJS = (model: Model): THREE.Mesh => {
     const merged = mergeBufferGeometriesManual(geometries);
 
     // Center geometry around origin so mesh.position controls the visual center
-    merged.center();
     merged.computeBoundingBox();
     merged.computeBoundingSphere();
 

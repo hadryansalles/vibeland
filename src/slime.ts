@@ -15,9 +15,9 @@ export class Slime extends Entity {
         const slimeModel: Model = {
             cubes: [
                 // Main body (lower)
-                { position: [0, -0.6, 0], size: [0.5, 0.5, 0.5], color: [0.18, 0.9, 0.36] },
+                { position: [0, -0.3, 0], size: [0.5, 0.5, 0.5], color: [0.18, 0.9, 0.36] },
                 // Top gloss
-                { position: [0, -0.4, 0.08], size: [0.3, 0.12, 0.3], color: [0.12, 0.95, 0.4] },
+                { position: [0, -0.1, 0.08], size: [0.3, 0.12, 0.3], color: [0.12, 0.95, 0.4] },
             ],
         };
 

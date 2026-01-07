@@ -60,7 +60,7 @@ export const TUNING = {
 
     // Undead (slow, durable lunger with small regeneration)
     UNDEAD_SIZE: 1.0,
-    UNDEAD_INITIAL_Y: 0.5,
+    UNDEAD_INITIAL_Y: 1.0,
     UNDEAD_HEALTH: 90,
     UNDEAD_SPEED: 0.03,
     UNDEAD_ATTACK_RANGE: 1.4,
