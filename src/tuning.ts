@@ -20,6 +20,8 @@ export const TUNING = {
     // Ground
     PLANE_SIZE: 50,
     PLANE_COLOR: 0x444444,
+    // Tile/grid
+    TILE_WORLD_SIZE: 1, // world units per tile
 
     // Character
     CHARACTER_SIZE: 1,

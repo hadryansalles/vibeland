@@ -7,6 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { TUNING } from './tuning'
 import { Player } from './player';
 import { Enemy } from './enemy';
+import { createWorld } from './world';
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -54,12 +55,7 @@ directionalLight.shadow.camera.bottom = -10;
 scene.add(directionalLight);
 
 // Ground
-const planeGeometry = new THREE.PlaneGeometry(TUNING.PLANE_SIZE, TUNING.PLANE_SIZE);
-const planeMaterial = new THREE.MeshStandardMaterial({ color: TUNING.PLANE_COLOR });
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.rotation.x = -Math.PI / 2;
-plane.receiveShadow = true; // Ground receives shadows
-scene.add(plane);
+createWorld(scene);
 
 // Player Character
 const player = new Player();
