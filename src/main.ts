@@ -5,6 +5,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { TUNING } from './tuning'
+import { BaseEnemy } from './base_enemy';
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -68,6 +69,16 @@ cube.castShadow = true; // Character casts shadows
 cube.receiveShadow = true;
 scene.add(cube);
 
+// Enemy
+const enemies: BaseEnemy[] = [];
+for (let i = 0; i < 100; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 10 + Math.random() * 20; // Spawn between 10 and 30 units away
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    enemies.push(new BaseEnemy(scene, new THREE.Vector3(x, 0.5, z), cube));
+}
+
 // Post-processing
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
@@ -110,9 +121,12 @@ window.addEventListener('resize', () => {
 
 // Animation Loop
 let jumpTime = 0;
+const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
+
+  const dt = clock.getDelta();
 
   const direction = new THREE.Vector3();
   const cameraForward = new THREE.Vector3();
@@ -147,10 +161,10 @@ function animate() {
 
   if (moving) {
     // Normalize to ensure consistent speed in all directions
-    direction.normalize().multiplyScalar(TUNING.MOVEMENT_SPEED);
+    direction.normalize().multiplyScalar(TUNING.MOVEMENT_SPEED * dt);
     cube.position.add(direction);
 
-    jumpTime += TUNING.JUMP_SPEED_INCREMENT;
+    jumpTime += TUNING.JUMP_SPEED_INCREMENT * dt;
     // Bouncing motion
     const bounce = Math.abs(Math.sin(jumpTime));
     cube.position.y = TUNING.CHARACTER_INITIAL_Y + bounce * TUNING.JUMP_BOUNCE_HEIGHT;
@@ -163,8 +177,12 @@ function animate() {
     cube.scale.set(scaleXZ, scaleY, scaleXZ);
   } else {
     jumpTime = 0;
-    cube.position.y = THREE.MathUtils.lerp(cube.position.y, TUNING.CHARACTER_INITIAL_Y, TUNING.JUMP_LERP_FACTOR);
-    cube.scale.lerp(new THREE.Vector3(1, 1, 1), TUNING.JUMP_LERP_FACTOR);
+    // Lerp factors are usually 0-1 per frame, but for time-based we use a different formula or high factor
+    // Simplified time-based lerp: lerp(a, b, 1 - exp(-decay * dt))
+    const lerpFactor = 1 - Math.exp(-TUNING.JUMP_LERP_FACTOR * dt);
+    
+    cube.position.y = THREE.MathUtils.lerp(cube.position.y, TUNING.CHARACTER_INITIAL_Y, lerpFactor);
+    cube.scale.lerp(new THREE.Vector3(1, 1, 1), lerpFactor);
   }
 
   // Stable target for camera and lights (ignoring jump height)
@@ -178,6 +196,8 @@ function animate() {
   directionalLight.position.copy(targetPosition).add(TUNING.DIRECTIONAL_LIGHT_POSITION);
   directionalLight.target.position.copy(targetPosition);
   directionalLight.target.updateMatrixWorld();
+
+  enemies.forEach(enemy => enemy.update(dt));
 
   composer.render();
 }
