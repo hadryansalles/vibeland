@@ -120,6 +120,9 @@ document.body.appendChild(hoverOverlay);
 
 const hoverRaycaster = new THREE.Raycaster();
 const hoverMouse = new THREE.Vector2();
+// Mouse hold state for auto-attack
+let mouseDown = false;
+let lastAttackPoint: THREE.Vector3 | null = null;
 
 renderer.domElement.addEventListener('mousemove', (e) => {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -151,10 +154,18 @@ renderer.domElement.addEventListener('mousemove', (e) => {
   } else {
     hoverOverlay.style.opacity = '0';
   }
+
+  // Update last attack ground point so holding the mouse will aim there
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TUNING.CHARACTER_INITIAL_Y);
+  const planePoint = new THREE.Vector3();
+  const hitPlane = hoverRaycaster.ray.intersectPlane(plane, planePoint);
+  if (hitPlane) lastAttackPoint = planePoint.clone();
+  else lastAttackPoint = null;
 });
 
 renderer.domElement.addEventListener('mouseleave', () => {
-//   hoverOverlay.style.display = 'none';
+  // stop auto-attacking when leaving the canvas
+  mouseDown = false;
 });
 
 // Respawn / death UI and state
@@ -216,6 +227,8 @@ window.addEventListener('keyup', (e) => {
 window.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return; // only left click
 
+  mouseDown = true;
+
   // Convert mouse to NDC
   const mouse = new THREE.Vector2(
     (e.clientX / window.innerWidth) * 2 - 1,
@@ -230,6 +243,7 @@ window.addEventListener('mousedown', (e) => {
   const intersectPoint = new THREE.Vector3();
   const hit = raycaster.ray.intersectPlane(plane, intersectPoint);
   if (hit) {
+    lastAttackPoint = intersectPoint.clone();
     const dir = new THREE.Vector3().subVectors(intersectPoint, player.position).setY(0);
     if (dir.lengthSq() < 1e-6) {
       player.attack(enemies);
@@ -238,8 +252,14 @@ window.addEventListener('mousedown', (e) => {
       player.attack(enemies, dir);
     }
   } else {
+    lastAttackPoint = null;
     player.attack(enemies);
   }
+});
+
+// Stop auto-attack on mouse up
+window.addEventListener('mouseup', (e) => {
+  if (e.button === 0) mouseDown = false;
 });
 
 // Resize handler
@@ -354,6 +374,21 @@ function animate(time: number) {
   } else {
     // still let update run minimal flash/cleanup
     player.update(dt);
+  }
+
+  // Auto-attack while left mouse button is held down
+  if (mouseDown && !player.isDead) {
+    if (lastAttackPoint) {
+      const dir = new THREE.Vector3().subVectors(lastAttackPoint, player.position).setY(0);
+      if (dir.lengthSq() < 1e-6) {
+        player.attack(enemies);
+      } else {
+        dir.normalize();
+        player.attack(enemies, dir);
+      }
+    } else {
+      player.attack(enemies);
+    }
   }
 
   // Camera / light behavior: freeze when dead, otherwise follow player
