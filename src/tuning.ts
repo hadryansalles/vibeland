@@ -46,6 +46,32 @@ export const TUNING = {
     ENEMY_ATTACK_ARC_ANGLE: 90,
     ENEMY_ATTACK_SEGMENTS: 12,
 
+    // Slime (small, bouncy melee enemy)
+    SLIME_SIZE: 0.9,
+    SLIME_INITIAL_Y: 0.45,
+    SLIME_HEALTH: 24,
+    SLIME_SPEED: 0.07,
+    SLIME_HOP_SPEED: 0.18,
+    SLIME_BOUNCE_HEIGHT: 0.25,
+    SLIME_SQUASH_FACTOR: 0.18,
+    SLIME_ATTACK_RANGE: 0.8,
+    SLIME_ATTACK_DAMAGE: 8,
+    SLIME_ATTACK_COOLDOWN: 0.8,
+
+    // Undead (slow, durable lunger with small regeneration)
+    UNDEAD_SIZE: 1.0,
+    UNDEAD_INITIAL_Y: 0.5,
+    UNDEAD_HEALTH: 90,
+    UNDEAD_SPEED: 0.03,
+    UNDEAD_ATTACK_RANGE: 1.4,
+    UNDEAD_ATTACK_WIDTH: 1.2,
+    UNDEAD_ATTACK_DAMAGE: 18,
+    UNDEAD_ATTACK_COOLDOWN: 1.6,
+    UNDEAD_LUNGE_SPEED: 0.45,
+    UNDEAD_LUNGE_DURATION: 0.22,
+    UNDEAD_REGEN_AMOUNT: 1, // HP per second when idle
+    UNDEAD_REGEN_DELAY: 3.0, // seconds after taking damage before regen
+
     // Visuals
     ATTACK_VISUAL_DURATION: 0.2, // Seconds
     DAMAGE_FLASH_DURATION: 0.1, // Seconds

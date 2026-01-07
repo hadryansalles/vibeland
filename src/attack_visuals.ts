@@ -38,3 +38,29 @@ export function createSectorMesh(radius: number, angleRad: number, segments: num
     mesh.rotateX(0); // already XZ plane
     return mesh;
 }
+
+// Create a rectangular plane in the XZ plane that starts at z=0 and extends to z=length.
+// Width is along the X axis (centered around X=0). The rectangle is oriented to +Z.
+export function createRectangleMesh(width: number, length: number, color: number, opacity = 0.6) {
+    const positions = new Float32Array([
+        // x, y, z
+        -width / 2, 0, 0,
+         width / 2, 0, 0,
+         width / 2, 0, length,
+        -width / 2, 0, length,
+    ]);
+
+    const indices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3,
+    ]);
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geom.setIndex(new THREE.BufferAttribute(indices, 1));
+    geom.computeVertexNormals();
+
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geom, mat);
+    return mesh;
+}

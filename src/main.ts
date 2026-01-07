@@ -7,6 +7,8 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { TUNING } from './tuning'
 import { Player } from './player';
 import { Enemy } from './enemy';
+import { Slime } from './slime';
+import { Undead } from './undead';
 import { Entity } from './entity';
 import { createWorld } from './world';
 
@@ -63,15 +65,23 @@ const player = new Player();
 player.addToScene(scene);
 
 // Enemy
-const enemies: Enemy[] = [];
+const enemies: Entity[] = [];
 for (let i = 0; i < 100; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 10 + Math.random() * 20; // Spawn between 10 and 30 units away
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    const enemy = new Enemy(new THREE.Vector3(x, 0.5, z), player);
-    enemy.addToScene(scene);
-    enemies.push(enemy);
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 10 + Math.random() * 20; // Spawn between 10 and 30 units away
+  const x = Math.cos(angle) * radius;
+  const z = Math.sin(angle) * radius;
+  const r = Math.random();
+  let ent: Entity;
+  if (r < 0.45) {
+    ent = new Slime(new THREE.Vector3(x, 0.45, z), player);
+  } else if (r < 0.9) {
+    ent = new Undead(new THREE.Vector3(x, 0.5, z), player);
+  } else {
+    ent = new Enemy(new THREE.Vector3(x, 0.5, z), player);
+  }
+  ent.addToScene(scene);
+  enemies.push(ent);
 }
 
 // Post-processing
